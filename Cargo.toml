@@ -1,0 +1,6 @@
+[workspace]
+members = ["crates/ui", "crates/file_explorer"]
+
+[workspace.dependencies]
+ui = { path = "crates/ui" }
+file_explorer = { path = "crates/file_explorer" }
