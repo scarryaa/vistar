@@ -26,6 +26,7 @@ impl TitleBar {
 impl RenderOnce for TitleBar {
     fn render(self, cx: &mut gpui::WindowContext) -> impl IntoElement {
         let height = Self::height(cx);
+
         div()
             .rounded_tr_lg()
             .rounded_tl_lg()

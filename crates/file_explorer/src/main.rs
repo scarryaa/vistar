@@ -1,14 +1,15 @@
 use gpui::{
     div, px, rgb, rgba, size, AnyElement, App, AppContext, Bounds, InteractiveElement, IntoElement,
-    ParentElement, Render, Styled, VisualContext, WindowBounds, WindowOptions,
+    ParentElement, Render, Styled, ViewContext, VisualContext, WindowBounds, WindowOptions,
 };
 use lazy_static::lazy_static;
 use paths::*;
 use std::{
     fs,
     path::{Path, PathBuf},
+    sync::Arc,
 };
-use ui::TitleBar;
+use ui::{FileItem, TitleBar};
 
 #[cfg(target_os = "linux")]
 mod paths {
@@ -88,7 +89,7 @@ mod paths {
 
 pub struct Main {
     text: String,
-    folder_contents: Vec<String>,
+    folder_contents: Vec<PathBuf>,
 }
 
 impl Main {
@@ -108,14 +109,20 @@ impl Main {
     fn fetch_folder_contents(&mut self, folder: &str) {
         self.folder_contents = fs::read_dir(folder)
             .unwrap()
-            .filter_map(|entry| entry.ok().and_then(|e| e.file_name().into_string().ok()))
+            .filter_map(|entry| entry.ok().map(|e| e.path()))
             .collect();
     }
 
-    fn folder_contents_elements(&self) -> Vec<AnyElement> {
+    fn folder_contents_elements(&self, cx: &mut ViewContext<Self>) -> Vec<AnyElement> {
         self.folder_contents
             .iter()
-            .map(|item| div().child(item.clone()).into_any_element())
+            .map(|item| {
+                FileItem::new(
+                    item,
+                    Some(Arc::new(|path| println!("File clicked {:?}", path))),
+                )
+                .into_any_element()
+            })
             .collect()
     }
 
@@ -189,11 +196,9 @@ impl Render for Main {
                             .flex_1()
                             .bg(rgb(0x232225))
                             .text_color(rgb(0xffffff))
-                            .child(
-                                div().flex_1().p(px(16.)).child(
-                                    div().flex_col().children(self.folder_contents_elements()),
-                                ),
-                            ),
+                            .child(div().flex_1().p(px(16.)).child(
+                                div().flex_col().children(self.folder_contents_elements(cx)),
+                            )),
                     ),
             )
     }

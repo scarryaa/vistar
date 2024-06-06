@@ -1,6 +1,21 @@
 [workspace]
-members = ["crates/ui", "crates/file_explorer"]
+members = [
+    "crates/ui",
+    "crates/file_explorer",
+    "crates/file_icons",
+    "crates/util",
+]
 
 [workspace.dependencies]
 ui = { path = "crates/ui" }
+util = { path = "crates/util" }
 file_explorer = { path = "crates/file_explorer" }
+file_icons = { path = "crates/file_icons" }
+
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_derive = { version = "1.0", features = ["deserialize_in_place"] }
+serde_json = { version = "1.0", features = ["preserve_order", "raw_value"] }
+anyhow = "1.0.57"
+lazy_static = "1.4.0"
+dirs = "4.0.0"
+chrono = "0.4.38"
