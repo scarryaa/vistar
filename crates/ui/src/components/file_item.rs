@@ -1,29 +1,17 @@
 use gpui::{
-    div, px, rgb, rgba, ClickEvent, InteractiveElement, IntoElement, ParentElement, RenderOnce,
-    Styled, WindowContext,
+    div, px, rgb, rgba, InteractiveElement, IntoElement, ParentElement, RenderOnce, Styled,
 };
-
-use crate::Clickable;
 
 #[derive(IntoElement)]
 pub struct FileItem {
     label: String,
-    on_click: Option<Box<dyn Fn(&ClickEvent, &mut WindowContext) + 'static>>,
 }
 
 impl FileItem {
     pub fn new(label: &str) -> Self {
         Self {
             label: label.to_string(),
-            on_click: None,
         }
-    }
-}
-
-impl Clickable for FileItem {
-    fn on_click(mut self, handler: impl Fn(&ClickEvent, &mut WindowContext) + 'static) -> Self {
-        self.on_click = Some(Box::new(handler));
-        self
     }
 }
 

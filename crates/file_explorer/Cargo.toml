@@ -10,3 +10,6 @@ path = "src/main.rs"
 [dependencies]
 gpui = { git = "https://github.com/zed-industries/zed" }
 ui.workspace = true
+file_icons.workspace = true
+lazy_static.workspace = true
+dirs.workspace = true

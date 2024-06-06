@@ -1,0 +1,14 @@
+[package]
+name = "file_icons"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/file_icons.rs"
+
+[dependencies]
+gpui = { git = "https://github.com/zed-industries/zed" }
+serde.workspace = true
+serde_derive.workspace = true
+serde_json.workspace = true
+util.workspace = true

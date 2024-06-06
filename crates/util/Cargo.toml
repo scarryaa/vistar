@@ -1,0 +1,15 @@
+[package]
+name = "util"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/util.rs"
+
+[dependencies]
+dirs = "4.0.0"
+anyhow.workspace = true
+lazy_static.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+tendril = "0.4.3"
