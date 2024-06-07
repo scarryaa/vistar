@@ -59,15 +59,16 @@ impl Render for TitleBar {
                     .rounded_tr_lg()
                     .child(
                         div()
-                            .h(Self::height(cx) - Pixels(5.))
+                            .h(Self::height(cx) - Pixels(10.))
                             .w(px(200.))
                             .ml(px(50.))
                             .rounded(px(8.))
                             .flex()
                             .items_center()
+                            .justify_end()
                             .bg(white())
                             .overflow_hidden()
-                            .child(div().child(self.path.clone()).ml(px(5.))),
+                            .child(div().child(self.path.clone()).ml(px(5.)).mr(px(5.))),
                     ),
             ])
     }
