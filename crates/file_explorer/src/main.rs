@@ -90,6 +90,7 @@ mod paths {
 pub struct Main {
     text: String,
     folder_contents: Vec<PathBuf>,
+    path: PathBuf,
 }
 
 impl Main {
@@ -134,6 +135,8 @@ impl Main {
 
 impl Render for Main {
     fn render(&mut self, cx: &mut gpui::ViewContext<Self>) -> impl IntoElement {
+        let titlebar = cx.new_view(|_cx| TitleBar::new("title_bar"));
+
         let make_sidebar_item = |label: &str, folder: &Path, cx: &mut gpui::ViewContext<Self>| {
             let label_owned = label.to_owned();
             let folder_owned = folder.to_owned();
@@ -149,11 +152,18 @@ impl Render for Main {
                     gpui::MouseButton::Left,
                     cx.listener(move |this, _event, cx| {
                         this.text = label_owned.clone();
+                        this.path = folder_owned.clone();
                         this.fetch_folder_contents(folder_owned.to_str().unwrap());
                         cx.notify();
                     }),
                 )
         };
+
+        if (titlebar.read(cx).path != self.path.to_str().unwrap().to_string()) {
+            titlebar.update(cx, |_titlebar, cx| {
+                _titlebar.path = self.path.to_str().unwrap().to_string()
+            })
+        }
 
         div()
             .rounded_br_lg()
@@ -161,7 +171,7 @@ impl Render for Main {
             .flex()
             .flex_col()
             .size_full()
-            .child(TitleBar::new("title_bar"))
+            .child(titlebar)
             .child(
                 div()
                     .rounded_br_lg()
@@ -209,6 +219,7 @@ fn main() {
         let main_view = Main {
             text: "Favorites".into(),
             folder_contents: vec![],
+            path: PathBuf::new(),
         };
 
         main_view.initialize_directories();

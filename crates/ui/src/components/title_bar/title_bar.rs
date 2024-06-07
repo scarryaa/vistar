@@ -1,10 +1,12 @@
 use gpui::{
-    div, px, rgb, transparent_black, ElementId, InteractiveElement, IntoElement, ParentElement,
-    Pixels, RenderOnce, Styled, WindowContext,
+    div, px, rgb, transparent_black, white, ElementId, InteractiveElement, IntoElement,
+    ParentElement, Pixels, Render, Styled, WindowContext,
 };
 
-#[derive(IntoElement)]
-pub struct TitleBar {}
+#[derive(Clone)]
+pub struct TitleBar {
+    pub path: String,
+}
 
 impl TitleBar {
     #[cfg(not(target_os = "windows"))]
@@ -19,12 +21,14 @@ impl TitleBar {
     }
 
     pub fn new(_id: impl Into<ElementId>) -> Self {
-        Self {}
+        Self {
+            path: "".to_string(),
+        }
     }
 }
 
-impl RenderOnce for TitleBar {
-    fn render(self, cx: &mut gpui::WindowContext) -> impl IntoElement {
+impl Render for TitleBar {
+    fn render(&mut self, cx: &mut gpui::ViewContext<Self>) -> impl IntoElement {
         let height = Self::height(cx);
 
         div()
@@ -48,10 +52,23 @@ impl RenderOnce for TitleBar {
                     .rounded_tl_lg(),
                 div()
                     .flex()
+                    .items_center()
                     .h(Self::height(cx))
                     .w(px(450.))
                     .bg(rgb(0x232225))
-                    .rounded_tr_lg(),
+                    .rounded_tr_lg()
+                    .child(
+                        div()
+                            .h(Self::height(cx) - Pixels(5.))
+                            .w(px(200.))
+                            .ml(px(50.))
+                            .rounded(px(8.))
+                            .flex()
+                            .items_center()
+                            .bg(white())
+                            .overflow_hidden()
+                            .child(div().child(self.path.clone()).ml(px(5.))),
+                    ),
             ])
     }
 }
