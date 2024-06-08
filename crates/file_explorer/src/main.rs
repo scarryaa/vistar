@@ -1,16 +1,16 @@
-use gpui::{
-    black, div, percentage, px, rgb, rgba, size, AnyElement, App, AppContext, Bounds,
-    InteractiveElement, IntoElement, ParentElement, Render, Styled, ViewContext, VisualContext,
-    WindowBounds, WindowOptions,
-};
-use lazy_static::lazy_static;
-use paths::*;
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Child,
     sync::{Arc, Mutex},
 };
+
+use gpui::{
+    div, px, rgb, rgba, size, AnyElement, App, AppContext, Bounds, Context, InteractiveElement,
+    IntoElement, Model, ParentElement, Render, Styled, ViewContext, VisualContext, WindowBounds,
+    WindowOptions,
+};
+use lazy_static::lazy_static;
+use paths::*;
 use ui::{FileItem, TitleBar};
 
 #[cfg(target_os = "linux")]
@@ -89,7 +89,7 @@ mod paths {
     }
 }
 
-pub struct Main {
+pub struct FileExplorer {
     text: String,
     folder_contents: Vec<PathBuf>,
     path: PathBuf,
@@ -97,7 +97,7 @@ pub struct Main {
     current_folder: PathBuf,
 }
 
-impl Main {
+impl FileExplorer {
     fn check_or_create_folder(&self, folder: &Path) {
         if !folder.exists() {
             match fs::create_dir_all(folder) {
@@ -174,8 +174,22 @@ impl Main {
             .collect();
     }
 
+    fn initialize_directories(&self) {
+        self.check_or_create_folder(&RECENT);
+        self.check_or_create_folder(&FAVORITES);
+    }
+}
+
+#[derive(Clone)]
+struct Main {
+    file_explorer: Model<FileExplorer>,
+}
+
+impl Main {
     fn folder_contents_elements(&self, _cx: &mut ViewContext<Self>) -> Vec<AnyElement> {
-        self.folder_contents
+        self.file_explorer
+            .read(_cx)
+            .folder_contents
             .iter()
             .map(|item| {
                 FileItem::new(
@@ -188,16 +202,12 @@ impl Main {
             })
             .collect()
     }
-
-    fn initialize_directories(&self) {
-        self.check_or_create_folder(&RECENT);
-        self.check_or_create_folder(&FAVORITES);
-    }
 }
 
 impl Render for Main {
-    fn render(&mut self, cx: &mut gpui::ViewContext<Self>) -> impl IntoElement {
+    fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
         let titlebar = cx.new_view(|_cx| TitleBar::new("title_bar"));
+        let self_clone = self.clone();
 
         let make_separator = || {
             div()
@@ -210,7 +220,7 @@ impl Render for Main {
                 .my(px(6.))
         };
 
-        let make_sidebar_item = |label: &str, folder: &Path, cx: &mut gpui::ViewContext<Self>| {
+        let make_sidebar_item = |label: &str, folder: &Path, cx: &mut ViewContext<Self>| {
             let label_owned = label.to_owned();
             let folder_owned = folder.to_owned();
 
@@ -223,29 +233,42 @@ impl Render for Main {
                 .hover(|style| style.bg(rgba(0xffffff05)))
                 .on_mouse_down(
                     gpui::MouseButton::Left,
-                    cx.listener(move |this, _event, cx| {
-                        this.text = label_owned.clone();
-                        this.path = folder_owned.clone();
-                        this.fetch_folder_contents(folder_owned.to_str().unwrap());
+                    cx.listener(move |_this, _event, cx| {
+                        self_clone.file_explorer.update(cx, |_file_explorer, _cx| {
+                            _file_explorer.text = label_owned.clone();
+                            _file_explorer.path = folder_owned.clone();
+                            _file_explorer.fetch_folder_contents(folder_owned.to_str().unwrap())
+                        });
                         cx.notify();
                     }),
                 )
         };
 
-        if titlebar.read(cx).path != self.path.to_str().unwrap().to_string() {
+        let file_explorer_path = self
+            .file_explorer
+            .read(cx)
+            .path
+            .to_str()
+            .unwrap()
+            .to_string();
+        let titlebar_path = titlebar.read(cx).path.clone();
+
+        if titlebar_path != file_explorer_path {
             titlebar.update(cx, |_titlebar, _cx| {
-                _titlebar.path = self.path.to_str().unwrap().to_string()
-            })
+                _titlebar.path = file_explorer_path.clone();
+            });
         }
 
         let mut sidebar_items_after_separator = div();
         sidebar_items_after_separator = sidebar_items_after_separator.child(make_separator());
 
-        // Add a sidebar item for each drive in the new div
-        for drive in &self.drives {
-            sidebar_items_after_separator = sidebar_items_after_separator.child(make_sidebar_item(
+        let drives = self.file_explorer.read(cx).drives.clone();
+
+        for drive in drives {
+            sidebar_items_after_separator = sidebar_items_after_separator.child(make_sidebar_item
+                .clone()(
                 drive.to_str().unwrap(),
-                drive,
+                &drive,
                 cx,
             ));
         }
@@ -255,15 +278,15 @@ impl Render for Main {
             .px(px(8.))
             .py(px(10.))
             .flex_col()
-            .child(make_sidebar_item("Recent", &RECENT, cx))
-            .child(make_sidebar_item("Favorites", &FAVORITES, cx))
-            .child(make_sidebar_item("Home", &HOME, cx))
-            .child(make_sidebar_item("Documents", &DOCUMENTS, cx))
-            .child(make_sidebar_item("Downloads", &DOWNLOADS, cx))
-            .child(make_sidebar_item("Music", &MUSIC, cx))
-            .child(make_sidebar_item("Pictures", &PICTURES, cx))
-            .child(make_sidebar_item("Videos", &VIDEOS, cx))
-            .child(make_sidebar_item("Trash", &TRASH, cx))
+            .child(make_sidebar_item.clone()("Recent", &RECENT, cx))
+            .child(make_sidebar_item.clone()("Favorites", &FAVORITES, cx))
+            .child(make_sidebar_item.clone()("Home", &HOME, cx))
+            .child(make_sidebar_item.clone()("Documents", &DOCUMENTS, cx))
+            .child(make_sidebar_item.clone()("Downloads", &DOWNLOADS, cx))
+            .child(make_sidebar_item.clone()("Music", &MUSIC, cx))
+            .child(make_sidebar_item.clone()("Pictures", &PICTURES, cx))
+            .child(make_sidebar_item.clone()("Videos", &VIDEOS, cx))
+            .child(make_sidebar_item.clone()("Trash", &TRASH, cx))
             .child(sidebar_items_after_separator);
 
         div()
@@ -303,16 +326,22 @@ impl Render for Main {
 
 fn main() {
     App::new().run(|cx: &mut AppContext| {
-        let mut main_view = Main {
-            text: "Favorites".into(),
-            folder_contents: vec![],
-            path: PathBuf::new(),
-            drives: vec![],
-            current_folder: PathBuf::new(),
+        let main_view: Main = Main {
+            file_explorer: cx.new_model(|_cx| FileExplorer {
+                text: "Favorites".into(),
+                folder_contents: vec![],
+                path: PathBuf::new(),
+                drives: vec![],
+                current_folder: PathBuf::new(),
+            }),
         };
 
-        main_view.initialize_directories();
-        main_view.fetch_drives();
+        {
+            main_view.file_explorer.update(cx, |_file_explorer, _ctx| {
+                _file_explorer.initialize_directories();
+                _file_explorer.fetch_drives();
+            })
+        }
 
         let bounds = Bounds::centered(None, size(px(600.), px(600.)), cx);
         cx.open_window(
@@ -322,5 +351,5 @@ fn main() {
             },
             move |cx| cx.new_view(|_cx| main_view),
         );
-    })
+    });
 }
