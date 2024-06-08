@@ -5,9 +5,9 @@ use std::{
 };
 
 use gpui::{
-    div, px, rgb, rgba, size, AnyElement, App, AppContext, Bounds, Context, InteractiveElement,
-    IntoElement, Model, ParentElement, Render, Styled, ViewContext, VisualContext, WindowBounds,
-    WindowOptions,
+    div, px, rgb, rgba, size, AnyElement, App, AppContext, Bounds, Context, EventEmitter,
+    InteractiveElement, IntoElement, Model, ParentElement, Render, Styled, ViewContext,
+    VisualContext, WindowBounds, WindowOptions,
 };
 use lazy_static::lazy_static;
 use paths::*;
@@ -88,6 +88,13 @@ mod paths {
         pub static ref FAVORITES: PathBuf = LOCAL.join("share/file_explorer/favorites");
     }
 }
+
+struct FileChange {
+    path: String,
+}
+
+impl EventEmitter<FileChange> for Main {}
+impl EventEmitter<FileChange> for FileExplorer {}
 
 pub struct FileExplorer {
     text: String,
@@ -192,13 +199,7 @@ impl Main {
             .folder_contents
             .iter()
             .map(|item| {
-                FileItem::new(
-                    item,
-                    Some(Arc::new(Mutex::new(|path: &str| {
-                        println!("File clicked {:?}", path)
-                    }))),
-                )
-                .into_any_element()
+                FileItem::new(item, Some(Arc::new(Mutex::new(|path: &str| {})))).into_any_element()
             })
             .collect()
     }
@@ -336,12 +337,10 @@ fn main() {
             }),
         };
 
-        {
-            main_view.file_explorer.update(cx, |_file_explorer, _ctx| {
-                _file_explorer.initialize_directories();
-                _file_explorer.fetch_drives();
-            })
-        }
+        main_view.file_explorer.update(cx, |_file_explorer, _ctx| {
+            _file_explorer.initialize_directories();
+            _file_explorer.fetch_drives();
+        });
 
         let bounds = Bounds::centered(None, size(px(600.), px(600.)), cx);
         cx.open_window(
