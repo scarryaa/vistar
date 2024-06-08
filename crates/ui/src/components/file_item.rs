@@ -1,7 +1,7 @@
 use std::{
     fs::{self, Metadata},
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, Mutex},
     time::SystemTime,
 };
 
@@ -11,11 +11,11 @@ pub struct FileItem {
     path: PathBuf,
     name: String,
     metadata: Metadata,
-    on_click: Option<Arc<dyn Fn(&Path) + Send + Sync>>,
+    on_click: Option<Arc<Mutex<dyn FnMut(&str) + Send + Sync>>>,
 }
 
 impl FileItem {
-    pub fn new(path: &Path, on_click: Option<Arc<dyn Fn(&Path) + Send + Sync>>) -> Self {
+    pub fn new(path: &Path, on_click: Option<Arc<Mutex<dyn FnMut(&str) + Send + Sync>>>) -> Self {
         let metadata = fs::metadata(path).expect("Unable to read metadata");
         let name = path.file_name().unwrap().to_string_lossy().into_owned();
 
@@ -53,8 +53,9 @@ impl IntoElement for FileItem {
             .bg(rgb(0x333333))
             .hover(|style| style.bg(rgb(0x444444)))
             .on_mouse_down(gpui::MouseButton::Left, move |_event, _cx| {
-                if let Some(handler) = click_handler.as_ref() {
-                    handler(&path_clone);
+                if let Some(handler) = click_handler.clone() {
+                    let mut handler = handler.lock().unwrap();
+                    handler(&path_clone.to_str().unwrap());
                 }
             })
             .child(

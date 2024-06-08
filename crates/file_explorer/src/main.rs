@@ -9,7 +9,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::Child,
-    sync::Arc,
+    sync::{Arc, Mutex},
 };
 use ui::{FileItem, TitleBar};
 
@@ -94,6 +94,7 @@ pub struct Main {
     folder_contents: Vec<PathBuf>,
     path: PathBuf,
     drives: Vec<PathBuf>,
+    current_folder: PathBuf,
 }
 
 impl Main {
@@ -173,13 +174,15 @@ impl Main {
             .collect();
     }
 
-    fn folder_contents_elements(&self, cx: &mut ViewContext<Self>) -> Vec<AnyElement> {
+    fn folder_contents_elements(&self, _cx: &mut ViewContext<Self>) -> Vec<AnyElement> {
         self.folder_contents
             .iter()
             .map(|item| {
                 FileItem::new(
                     item,
-                    Some(Arc::new(|path| println!("File clicked {:?}", path))),
+                    Some(Arc::new(Mutex::new(|path: &str| {
+                        println!("File clicked {:?}", path)
+                    }))),
                 )
                 .into_any_element()
             })
@@ -305,6 +308,7 @@ fn main() {
             folder_contents: vec![],
             path: PathBuf::new(),
             drives: vec![],
+            current_folder: PathBuf::new(),
         };
 
         main_view.initialize_directories();
