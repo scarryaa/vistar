@@ -19,3 +19,5 @@ anyhow = "1.0.57"
 lazy_static = "1.4.0"
 dirs = "4.0.0"
 chrono = "0.4.38"
+sysinfo = "0.21"
+winapi = { version = "0.3", features = ["fileapi", "handleapi", "winbase", "winnt"] }

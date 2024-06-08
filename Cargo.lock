@@ -1365,7 +1365,9 @@ dependencies = [
  "file_icons",
  "gpui",
  "lazy_static",
+ "sysinfo",
  "ui",
+ "winapi",
 ]
 
 [[package]]
@@ -2504,6 +2506,15 @@ checksum = "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a"
 dependencies = [
  "memchr",
  "minimal-lexical",
+]
+
+[[package]]
+name = "ntapi"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c28774a7fd2fbb4f0babd8237ce554b73af68021b5f695a3cebd6c59bac0980f"
+dependencies = [
+ "winapi",
 ]
 
 [[package]]
@@ -3836,6 +3847,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e801cf239ecd6ccd71f03d270d67dd53d13e90aab208bf4b8fe4ad957ea949b0"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "sysinfo"
+version = "0.21.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f88d66f3341b688163d3585037954ff276cf24a234d015b30025318a3e3449a"
+dependencies = [
+ "cfg-if",
+ "core-foundation-sys",
+ "libc",
+ "ntapi",
+ "once_cell",
+ "rayon",
+ "winapi",
 ]
 
 [[package]]

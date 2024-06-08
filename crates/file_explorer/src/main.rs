@@ -1,12 +1,14 @@
 use gpui::{
-    div, px, rgb, rgba, size, AnyElement, App, AppContext, Bounds, InteractiveElement, IntoElement,
-    ParentElement, Render, Styled, ViewContext, VisualContext, WindowBounds, WindowOptions,
+    black, div, percentage, px, rgb, rgba, size, AnyElement, App, AppContext, Bounds,
+    InteractiveElement, IntoElement, ParentElement, Render, Styled, ViewContext, VisualContext,
+    WindowBounds, WindowOptions,
 };
 use lazy_static::lazy_static;
 use paths::*;
 use std::{
     fs,
     path::{Path, PathBuf},
+    process::Child,
     sync::Arc,
 };
 use ui::{FileItem, TitleBar};
@@ -91,6 +93,7 @@ pub struct Main {
     text: String,
     folder_contents: Vec<PathBuf>,
     path: PathBuf,
+    drives: Vec<PathBuf>,
 }
 
 impl Main {
@@ -105,6 +108,62 @@ impl Main {
                 ),
             }
         }
+    }
+
+    #[cfg(target_os = "windows")]
+    fn fetch_drives(&mut self) {
+        use std::io;
+        use std::ptr;
+        use winapi::um::fileapi::GetLogicalDriveStringsW;
+
+        unsafe {
+            let mut drive_strings = [0u16; 256];
+            let result = GetLogicalDriveStringsW(256, drive_strings.as_mut_ptr());
+            if result == 0 {
+                println!("Failed to get logical drives");
+                return;
+            }
+
+            let mut drives = Vec::new();
+            let mut i = 0;
+            while i < result as usize {
+                let drive_str =
+                    String::from_utf16_lossy(&drive_strings[i..i + 4]).trim_end_matches('\u{0}');
+                let drive = PathBuf::from(drive_str);
+
+                // Check for access before adding the drive
+                if fs::metadata(&drive).is_ok() {
+                    drives.push(drive);
+                } else {
+                    println!("Access denied to drive: {}", drive_str);
+                }
+                i += 4;
+            }
+            self.drives = drives;
+        }
+    }
+
+    #[cfg(target_family = "unix")]
+    fn fetch_drives(&mut self) {
+        use sysinfo::{DiskExt, System, SystemExt};
+
+        let sys = System::new_all();
+        let drives = sys
+            .disks()
+            .into_iter()
+            .filter_map(|disk| {
+                let path = disk.mount_point().to_path_buf();
+                // Check for access before adding the drive
+                if fs::metadata(&path).is_ok() {
+                    Some(path)
+                } else {
+                    println!("Access denied to drive: {}", path.display());
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        self.drives = drives;
     }
 
     fn fetch_folder_contents(&mut self, folder: &str) {
@@ -137,6 +196,17 @@ impl Render for Main {
     fn render(&mut self, cx: &mut gpui::ViewContext<Self>) -> impl IntoElement {
         let titlebar = cx.new_view(|_cx| TitleBar::new("title_bar"));
 
+        let make_separator = || {
+            div()
+                .w_full()
+                .h(px(1.))
+                .mx(px(5.))
+                .bg(rgb(0x545454))
+                .rounded(px(8.))
+                .mr(px(10.))
+                .my(px(6.))
+        };
+
         let make_sidebar_item = |label: &str, folder: &Path, cx: &mut gpui::ViewContext<Self>| {
             let label_owned = label.to_owned();
             let folder_owned = folder.to_owned();
@@ -159,11 +229,39 @@ impl Render for Main {
                 )
         };
 
-        if (titlebar.read(cx).path != self.path.to_str().unwrap().to_string()) {
-            titlebar.update(cx, |_titlebar, cx| {
+        if titlebar.read(cx).path != self.path.to_str().unwrap().to_string() {
+            titlebar.update(cx, |_titlebar, _cx| {
                 _titlebar.path = self.path.to_str().unwrap().to_string()
             })
         }
+
+        let mut sidebar_items_after_separator = div();
+        sidebar_items_after_separator = sidebar_items_after_separator.child(make_separator());
+
+        // Add a sidebar item for each drive in the new div
+        for drive in &self.drives {
+            sidebar_items_after_separator = sidebar_items_after_separator.child(make_sidebar_item(
+                drive.to_str().unwrap(),
+                drive,
+                cx,
+            ));
+        }
+
+        let sidebar_items = div()
+            .rounded_bl_lg()
+            .px(px(8.))
+            .py(px(10.))
+            .flex_col()
+            .child(make_sidebar_item("Recent", &RECENT, cx))
+            .child(make_sidebar_item("Favorites", &FAVORITES, cx))
+            .child(make_sidebar_item("Home", &HOME, cx))
+            .child(make_sidebar_item("Documents", &DOCUMENTS, cx))
+            .child(make_sidebar_item("Downloads", &DOWNLOADS, cx))
+            .child(make_sidebar_item("Music", &MUSIC, cx))
+            .child(make_sidebar_item("Pictures", &PICTURES, cx))
+            .child(make_sidebar_item("Videos", &VIDEOS, cx))
+            .child(make_sidebar_item("Trash", &TRASH, cx))
+            .child(sidebar_items_after_separator);
 
         div()
             .rounded_br_lg()
@@ -179,27 +277,13 @@ impl Render for Main {
                     .flex()
                     .bg(rgb(0x232225))
                     .size_full()
-                    .child(
-                        div().flex().flex_col().w(px(150.)).bg(rgb(0x19191a)).child(
-                            div().flex_1().child(
-                                div()
-                                    .rounded_bl_lg()
-                                    .px(px(8.))
-                                    .py(px(10.))
-                                    .flex_col()
-                                    .child(make_sidebar_item("Recent", &RECENT, cx))
-                                    .child(make_sidebar_item("Favorites", &FAVORITES, cx))
-                                    .child(make_sidebar_item("Home", &HOME, cx))
-                                    .child(make_sidebar_item("Documents", &DOCUMENTS, cx))
-                                    .child(make_sidebar_item("Downloads", &DOWNLOADS, cx))
-                                    .child(make_sidebar_item("Music", &MUSIC, cx))
-                                    .child(make_sidebar_item("Pictures", &PICTURES, cx))
-                                    .child(make_sidebar_item("Videos", &VIDEOS, cx))
-                                    .child(make_sidebar_item("Trash", &TRASH, cx)),
-                            ),
-                        ),
-                    )
-                    .child(
+                    .children([
+                        div()
+                            .flex()
+                            .flex_col()
+                            .w(px(150.))
+                            .bg(rgb(0x19191a))
+                            .child(sidebar_items),
                         div()
                             .rounded_br_lg()
                             .rounded_bl_lg()
@@ -209,20 +293,22 @@ impl Render for Main {
                             .child(div().flex_1().p(px(16.)).child(
                                 div().flex_col().children(self.folder_contents_elements(cx)),
                             )),
-                    ),
+                    ]),
             )
     }
 }
 
 fn main() {
     App::new().run(|cx: &mut AppContext| {
-        let main_view = Main {
+        let mut main_view = Main {
             text: "Favorites".into(),
             folder_contents: vec![],
             path: PathBuf::new(),
+            drives: vec![],
         };
 
         main_view.initialize_directories();
+        main_view.fetch_drives();
 
         let bounds = Bounds::centered(None, size(px(600.), px(600.)), cx);
         cx.open_window(

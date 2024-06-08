@@ -14,3 +14,5 @@ file_icons.workspace = true
 lazy_static.workspace = true
 dirs.workspace = true
 chrono.workspace = true
+winapi.workspace = true
+sysinfo.workspace = true
