@@ -244,14 +244,18 @@ impl Render for Main {
                 .line_height(px(35.))
                 .px(px(10.))
                 .text_color(rgb(0xf3f3f3))
-                .child(
-                    div()
-                        .child(svg().path("icons/file_icons/favorites.svg"))
-                        .w(px(20.))
-                        .h(px(20.))
-                        .text_color(white()),
-                )
-                .child(label_owned.clone())
+                .flex()
+                .flex_row()
+                .gap(px(12.))
+                .items_center()
+                .children([
+                    div().children([svg()
+                        .path("icons/file_icons/folder.svg")
+                        .w(px(16.))
+                        .h(px(16.))
+                        .text_color(white())]),
+                    div().child(label_owned.clone()),
+                ])
                 .hover(|style| style.bg(rgba(0xffffff05)))
                 .on_mouse_down(
                     gpui::MouseButton::Left,
