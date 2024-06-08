@@ -6,9 +6,9 @@ use std::{
 
 use assets::Assets;
 use gpui::{
-    div, px, rgb, rgba, size, svg, white, AnyElement, App, AppContext, Bounds, Context, Element,
+    div, px, rgb, rgba, size, svg, white, AnyElement, App, AppContext, Bounds, Context,
     EventEmitter, InteractiveElement, IntoElement, Model, ParentElement, Pixels, Render, Styled,
-    Svg, ViewContext, VisualContext, WindowBounds, WindowOptions,
+    ViewContext, VisualContext, WindowBounds, WindowOptions,
 };
 use lazy_static::lazy_static;
 use paths::*;
@@ -235,40 +235,44 @@ impl Render for Main {
                 .my(px(6.))
         };
 
-        let make_sidebar_item = |label: &str, folder: &Path, cx: &mut ViewContext<Self>| {
-            let label_owned = label.to_owned();
-            let folder_owned = folder.to_owned();
+        let make_sidebar_item =
+            |label: &str, folder: &Path, cx: &mut ViewContext<Self>, svg_path: &str| {
+                let label_owned = label.to_owned();
+                let folder_owned = folder.to_owned();
 
-            div()
-                .rounded(px(8.))
-                .line_height(px(35.))
-                .px(px(10.))
-                .text_color(rgb(0xf3f3f3))
-                .flex()
-                .flex_row()
-                .gap(px(12.))
-                .items_center()
-                .children([
-                    div().children([svg()
-                        .path("icons/file_icons/folder.svg")
-                        .w(px(16.))
-                        .h(px(16.))
-                        .text_color(white())]),
-                    div().child(label_owned.clone()),
-                ])
-                .hover(|style| style.bg(rgba(0xffffff05)))
-                .on_mouse_down(
-                    gpui::MouseButton::Left,
-                    cx.listener(move |_this, _event, cx| {
-                        self_clone.file_explorer.update(cx, |_file_explorer, _cx| {
-                            _file_explorer.text = label_owned.clone();
-                            _file_explorer.path = folder_owned.clone();
-                            _file_explorer.fetch_folder_contents(folder_owned.to_str().unwrap())
-                        });
-                        cx.notify();
-                    }),
-                )
-        };
+                div()
+                    .rounded(px(8.))
+                    .line_height(px(35.))
+                    .px(px(10.))
+                    .text_color(rgb(0xf3f3f3))
+                    .flex()
+                    .flex_row()
+                    .gap(px(12.))
+                    .items_center()
+                    .children([
+                        div().children([svg()
+                            .path(svg_path.to_owned())
+                            .w(px(16.))
+                            .h(px(16.))
+                            .text_color(white())]),
+                        div()
+                            .child(label_owned.clone())
+                            .overflow_hidden()
+                            .whitespace_nowrap(),
+                    ])
+                    .hover(|style| style.bg(rgba(0xffffff05)))
+                    .on_mouse_down(
+                        gpui::MouseButton::Left,
+                        cx.listener(move |_this, _event, cx| {
+                            self_clone.file_explorer.update(cx, |_file_explorer, _cx| {
+                                _file_explorer.text = label_owned.clone();
+                                _file_explorer.path = folder_owned.clone();
+                                _file_explorer.fetch_folder_contents(folder_owned.to_str().unwrap())
+                            });
+                            cx.notify();
+                        }),
+                    )
+            };
 
         let file_explorer_path = self
             .file_explorer
@@ -296,6 +300,7 @@ impl Render for Main {
                 drive.to_str().unwrap(),
                 &drive,
                 cx,
+                "icons/file_icons/hard_drive.svg",
             ));
         }
 
@@ -304,15 +309,60 @@ impl Render for Main {
             .px(px(8.))
             .py(px(10.))
             .flex_col()
-            .child(make_sidebar_item.clone()("Recent", &RECENT, cx))
-            .child(make_sidebar_item.clone()("Favorites", &FAVORITES, cx))
-            .child(make_sidebar_item.clone()("Home", &HOME, cx))
-            .child(make_sidebar_item.clone()("Documents", &DOCUMENTS, cx))
-            .child(make_sidebar_item.clone()("Downloads", &DOWNLOADS, cx))
-            .child(make_sidebar_item.clone()("Music", &MUSIC, cx))
-            .child(make_sidebar_item.clone()("Pictures", &PICTURES, cx))
-            .child(make_sidebar_item.clone()("Videos", &VIDEOS, cx))
-            .child(make_sidebar_item.clone()("Trash", &TRASH, cx))
+            .child(make_sidebar_item.clone()(
+                "Recent",
+                &RECENT,
+                cx,
+                "icons/file_icons/clock.svg",
+            ))
+            .child(make_sidebar_item.clone()(
+                "Favorites",
+                &FAVORITES,
+                cx,
+                "icons/file_icons/star.svg",
+            ))
+            .child(make_sidebar_item.clone()(
+                "Home",
+                &HOME,
+                cx,
+                "icons/file_icons/house.svg",
+            ))
+            .child(make_sidebar_item.clone()(
+                "Documents",
+                &DOCUMENTS,
+                cx,
+                "icons/file_icons/file_text.svg",
+            ))
+            .child(make_sidebar_item.clone()(
+                "Downloads",
+                &DOWNLOADS,
+                cx,
+                "icons/file_icons/download.svg",
+            ))
+            .child(make_sidebar_item.clone()(
+                "Music",
+                &MUSIC,
+                cx,
+                "icons/file_icons/music.svg",
+            ))
+            .child(make_sidebar_item.clone()(
+                "Pictures",
+                &PICTURES,
+                cx,
+                "icons/file_icons/image.svg",
+            ))
+            .child(make_sidebar_item.clone()(
+                "Videos",
+                &VIDEOS,
+                cx,
+                "icons/file_icons/video.svg",
+            ))
+            .child(make_sidebar_item.clone()(
+                "Trash",
+                &TRASH,
+                cx,
+                "icons/file_icons/trash.svg",
+            ))
             .child(sidebar_items_after_separator);
 
         div()
