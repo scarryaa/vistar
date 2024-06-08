@@ -4,10 +4,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use assets::Assets;
 use gpui::{
-    div, px, rgb, rgba, size, AnyElement, App, AppContext, Bounds, Context, EventEmitter,
-    InteractiveElement, IntoElement, Model, ParentElement, Render, Styled, ViewContext,
-    VisualContext, WindowBounds, WindowOptions,
+    div, px, rgb, rgba, size, svg, white, AnyElement, App, AppContext, Bounds, Context, Element,
+    EventEmitter, InteractiveElement, IntoElement, Model, ParentElement, Pixels, Render, Styled,
+    Svg, ViewContext, VisualContext, WindowBounds, WindowOptions,
 };
 use lazy_static::lazy_static;
 use paths::*;
@@ -86,6 +87,19 @@ mod paths {
         pub static ref TRASH: PathBuf = HOME.join(".local/share/Trash/files");
         pub static ref RECENT: PathBuf = LOCAL.join("share/file_explorer/recent");
         pub static ref FAVORITES: PathBuf = LOCAL.join("share/file_explorer/favorites");
+    }
+}
+
+#[derive(Clone)]
+pub struct Style {
+    pub scrollbar_width: Pixels,
+}
+
+impl Default for Style {
+    fn default() -> Self {
+        Self {
+            scrollbar_width: Pixels::default(),
+        }
     }
 }
 
@@ -230,6 +244,13 @@ impl Render for Main {
                 .line_height(px(35.))
                 .px(px(10.))
                 .text_color(rgb(0xf3f3f3))
+                .child(
+                    div()
+                        .child(svg().path("icons/file_icons/favorites.svg"))
+                        .w(px(20.))
+                        .h(px(20.))
+                        .text_color(white()),
+                )
                 .child(label_owned.clone())
                 .hover(|style| style.bg(rgba(0xffffff05)))
                 .on_mouse_down(
@@ -326,7 +347,7 @@ impl Render for Main {
 }
 
 fn main() {
-    App::new().run(|cx: &mut AppContext| {
+    App::new().with_assets(Assets).run(|cx: &mut AppContext| {
         let main_view: Main = Main {
             file_explorer: cx.new_model(|_cx| FileExplorer {
                 text: "Favorites".into(),

@@ -4,6 +4,7 @@ members = [
     "crates/file_explorer",
     "crates/file_icons",
     "crates/util",
+    "crates/assets"
 ]
 
 [workspace.dependencies]
@@ -11,6 +12,7 @@ ui = { path = "crates/ui" }
 util = { path = "crates/util" }
 file_explorer = { path = "crates/file_explorer" }
 file_icons = { path = "crates/file_icons" }
+assets = { path = "crates/assets" }
 
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_derive = { version = "1.0", features = ["deserialize_in_place"] }
@@ -21,3 +23,4 @@ dirs = "4.0.0"
 chrono = "0.4.38"
 sysinfo = "0.21"
 winapi = { version = "0.3", features = ["fileapi", "handleapi", "winbase", "winnt"] }
+rust-embed = { version = "8.4", features = ["include-exclude"] }

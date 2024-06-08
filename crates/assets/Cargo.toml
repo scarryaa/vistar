@@ -1,0 +1,13 @@
+[package]
+name = "assets"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/assets.rs"
+
+[dependencies]
+gpui = { git = "https://github.com/zed-industries/zed" }
+
+anyhow.workspace = true
+rust-embed.workspace = true

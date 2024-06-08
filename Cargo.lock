@@ -126,6 +126,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "assets"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "gpui",
+ "rust-embed",
+]
+
+[[package]]
 name = "async-broadcast"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1360,6 +1369,7 @@ dependencies = [
 name = "file_explorer"
 version = "0.1.0"
 dependencies = [
+ "assets",
  "chrono",
  "dirs 4.0.0",
  "file_icons",
