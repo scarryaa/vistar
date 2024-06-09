@@ -8,7 +8,7 @@ use assets::Assets;
 use gpui::{
     div, px, rgb, rgba, size, svg, white, AnyElement, App, AppContext, Bounds, Context,
     EventEmitter, InteractiveElement, IntoElement, Model, ParentElement, Pixels, Render, Styled,
-    ViewContext, VisualContext, WindowBounds, WindowOptions,
+    View, ViewContext, VisualContext, WindowBounds, WindowOptions,
 };
 use lazy_static::lazy_static;
 use paths::*;
@@ -204,6 +204,7 @@ impl FileExplorer {
 #[derive(Clone)]
 struct Main {
     file_explorer: Model<FileExplorer>,
+    title_bar: View<TitleBar>,
 }
 
 impl Main {
@@ -221,7 +222,6 @@ impl Main {
 
 impl Render for Main {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
-        let titlebar = cx.new_view(|_cx| TitleBar::new("title_bar"));
         let self_clone = self.clone();
 
         let make_separator = || {
@@ -281,10 +281,10 @@ impl Render for Main {
             .to_str()
             .unwrap()
             .to_string();
-        let titlebar_path = titlebar.read(cx).path.clone();
+        let titlebar_path = self.title_bar.read(cx).path.clone();
 
         if titlebar_path != file_explorer_path {
-            titlebar.update(cx, |_titlebar, _cx| {
+            self.title_bar.update(cx, |_titlebar, _cx| {
                 _titlebar.path = file_explorer_path.clone();
             });
         }
@@ -371,7 +371,7 @@ impl Render for Main {
             .flex()
             .flex_col()
             .size_full()
-            .child(titlebar)
+            .child(self.title_bar.clone())
             .child(
                 div()
                     .rounded_br_lg()
@@ -392,9 +392,14 @@ impl Render for Main {
                             .flex_1()
                             .bg(rgb(0x232225))
                             .text_color(rgb(0xffffff))
-                            .child(div().flex_1().p(px(16.)).child(
-                                div().flex_col().children(self.folder_contents_elements(cx)),
-                            )),
+                            .child(
+                                div().flex_1().p(px(16.)).child(
+                                    div()
+                                        .flex_col()
+                                        .children(self.folder_contents_elements(cx))
+                                        .overflow_hidden(),
+                                ),
+                            ),
                     ]),
             )
     }
@@ -402,28 +407,44 @@ impl Render for Main {
 
 fn main() {
     App::new().with_assets(Assets).run(|cx: &mut AppContext| {
-        let main_view: Main = Main {
-            file_explorer: cx.new_model(|_cx| FileExplorer {
-                text: "Favorites".into(),
-                folder_contents: vec![],
-                path: PathBuf::new(),
-                drives: vec![],
-                current_folder: PathBuf::new(),
-            }),
-        };
+        let file_explorer_model = cx.new_model(|_cx| FileExplorer {
+            text: "Favorites".into(),
+            folder_contents: vec![],
+            path: PathBuf::new(),
+            drives: vec![],
+            current_folder: PathBuf::new(),
+        });
 
-        main_view.file_explorer.update(cx, |_file_explorer, _ctx| {
-            _file_explorer.initialize_directories();
-            _file_explorer.fetch_drives();
+        let title_bar_model = cx.new_model(|_cx| TitleBar {
+            path: "".to_string(),
+        });
+
+        cx.update_model(&file_explorer_model, |file_explorer, _ctx| {
+            file_explorer.initialize_directories();
+            file_explorer.fetch_drives();
         });
 
         let bounds = Bounds::centered(None, size(px(600.), px(600.)), cx);
+
+        let mut main_view = Main {
+            file_explorer: file_explorer_model,
+            title_bar: View {
+                model: title_bar_model,
+            },
+        };
+
         cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            move |cx| cx.new_view(|_cx| main_view),
+            move |cx| {
+                cx.new_view(|_cx| {
+                    let titlebar = _cx.new_view(|_cx| TitleBar::new("title_bar"));
+                    main_view.title_bar = titlebar;
+                    main_view
+                })
+            },
         );
     });
 }
