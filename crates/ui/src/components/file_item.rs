@@ -5,17 +5,25 @@ use std::{
     time::SystemTime,
 };
 
-use gpui::{div, px, rgb, AnyElement, InteractiveElement, IntoElement, ParentElement, Styled};
+use gpui::{
+    div, px, rgb, rgba, svg, white, AnyElement, InteractiveElement, IntoElement, ParentElement,
+    Styled,
+};
 
 pub struct FileItem {
     path: PathBuf,
     name: String,
     metadata: Metadata,
     on_click: Option<Arc<Mutex<dyn FnMut(&str) + Send + Sync>>>,
+    is_folder: bool,
 }
 
 impl FileItem {
-    pub fn new(path: &Path, on_click: Option<Arc<Mutex<dyn FnMut(&str) + Send + Sync>>>) -> Self {
+    pub fn new(
+        path: &Path,
+        on_click: Option<Arc<Mutex<dyn FnMut(&str) + Send + Sync>>>,
+        is_folder: bool,
+    ) -> Self {
         let metadata = fs::metadata(path).expect("Unable to read metadata");
         let name = path.file_name().unwrap().to_string_lossy().into_owned();
 
@@ -24,6 +32,7 @@ impl FileItem {
             name,
             metadata,
             on_click,
+            is_folder,
         }
     }
 
@@ -45,13 +54,17 @@ impl IntoElement for FileItem {
     fn into_element(self) -> AnyElement {
         let path_clone = self.path.clone();
         let click_handler = self.on_click.clone();
+        let icon_path = if self.is_folder {
+            "icons/file_icons/folder.svg"
+        } else {
+            "icons/file_icons/file_text.svg"
+        };
 
         div()
             .rounded(px(8.))
             .px(px(10.))
             .py(px(5.))
-            .bg(rgb(0x333333))
-            .hover(|style| style.bg(rgb(0x444444)))
+            .hover(|style| style.bg(rgba(0xffffff0d)))
             .on_mouse_down(gpui::MouseButton::Left, move |_event, _cx| {
                 if let Some(handler) = click_handler.clone() {
                     let mut handler = handler.lock().unwrap();
@@ -60,15 +73,28 @@ impl IntoElement for FileItem {
             })
             .child(
                 div()
+                    .w(px(60.))
                     .flex()
-                    .flex_row()
-                    .justify_between()
-                    .child(div().child(self.name.clone()))
-                    .child(
+                    .flex_col()
+                    .items_center()
+                    .content_center()
+                    .justify_center()
+                    .children([
                         div()
-                            .text_color(rgb(0xAAAAAA))
-                            .child(self.format_metadata()),
-                    ),
+                            .flex()
+                            .flex_col()
+                            .items_center()
+                            .content_center()
+                            .justify_center()
+                            .child(
+                                svg()
+                                    .path(icon_path)
+                                    .w(px(45.))
+                                    .h(px(45.))
+                                    .text_color(white()),
+                            ),
+                        div().flex().flex_wrap().child(self.name.clone()),
+                    ]),
             )
             .into_any_element()
     }

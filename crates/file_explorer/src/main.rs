@@ -205,18 +205,41 @@ impl FileExplorer {
 struct Main {
     file_explorer: Model<FileExplorer>,
     title_bar: View<TitleBar>,
+    new_path: Option<String>,
 }
 
 impl Main {
-    fn folder_contents_elements(&self, _cx: &mut ViewContext<Self>) -> Vec<AnyElement> {
-        self.file_explorer
-            .read(_cx)
-            .folder_contents
+    fn folder_contents_elements(&mut self, _cx: &mut ViewContext<Self>) -> Vec<AnyElement> {
+        let folder_contents = self.file_explorer.read(_cx).folder_contents.clone();
+
+        let elements: Vec<AnyElement> = folder_contents
             .iter()
             .map(|item| {
-                FileItem::new(item, Some(Arc::new(Mutex::new(|path: &str| {})))).into_any_element()
+                let is_folder = item.is_dir();
+
+                FileItem::new(
+                    item,
+                    Some(Arc::new(Mutex::new(move |path: &str| {}))),
+                    is_folder,
+                )
+                .into_any_element()
             })
-            .collect()
+            .collect();
+
+        elements
+    }
+
+    fn check_and_update_path(
+        &self,
+        cx: &mut ViewContext<Self>,
+        new_path: Arc<Mutex<Option<String>>>,
+    ) {
+        let new_path_locked = new_path.lock().unwrap();
+        if let Some(ref new_path_str) = *new_path_locked {
+            self.file_explorer.update(cx, |file_explorer, _cx| {
+                file_explorer.path = PathBuf::from(new_path_str);
+            });
+        }
     }
 }
 
@@ -287,6 +310,16 @@ impl Render for Main {
             self.title_bar.update(cx, |_titlebar, _cx| {
                 _titlebar.path = file_explorer_path.clone();
             });
+        }
+
+        if let Some(ref new_path) = self.new_path {
+            if !new_path.is_empty() {
+                self.file_explorer.update(cx, |file_explorer, _cx| {
+                    file_explorer.path = PathBuf::from(new_path);
+                    file_explorer.fetch_folder_contents(new_path);
+                });
+                self.new_path = None;
+            }
         }
 
         let mut sidebar_items_after_separator = div();
@@ -395,9 +428,11 @@ impl Render for Main {
                             .child(
                                 div().flex_1().p(px(16.)).child(
                                     div()
-                                        .flex_col()
-                                        .children(self.folder_contents_elements(cx))
-                                        .overflow_hidden(),
+                                        .flex()
+                                        .flex_row()
+                                        .gap(px(20.))
+                                        .flex_wrap()
+                                        .children(self.folder_contents_elements(cx)),
                                 ),
                             ),
                     ]),
@@ -431,6 +466,7 @@ fn main() {
             title_bar: View {
                 model: title_bar_model,
             },
+            new_path: None,
         };
 
         cx.open_window(
